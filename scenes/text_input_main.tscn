@@ -1,0 +1,61 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqke0vubikh0h"]
+
+[ext_resource type="Script" uid="uid://bfjuja3w1utcf" path="res://scripts/communication.gd" id="1_28jx6"]
+
+[node name="TextInputMain" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 4
+script = ExtResource("1_28jx6")
+
+[node name="TextInput" type="TextEdit" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 274.0
+offset_top = 458.0
+offset_right = 668.0
+offset_bottom = 571.0
+grow_horizontal = 2
+size_flags_vertical = 4
+metadata/_edit_use_anchors_ = true
+
+[node name="TextOutput" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 276.0
+offset_top = 43.0
+offset_right = 797.0
+offset_bottom = 442.0
+vertical_alignment = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="SendButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 689.0
+offset_top = 467.0
+offset_right = 892.0
+offset_bottom = 507.0
+scale = Vector2(0.64, 0.64)
+text = "SEND"
+metadata/_edit_use_anchors_ = true
+
+[node name="CancelButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 689.0
+offset_top = 501.0
+offset_right = 892.0
+offset_bottom = 541.0
+scale = Vector2(0.64, 0.64)
+text = "CANCEL"
+metadata/_edit_use_anchors_ = true
+
+[node name="NewConversation" type="Button" parent="."]
+layout_mode = 0
+offset_left = 689.0
+offset_top = 534.0
+offset_right = 892.0
+offset_bottom = 574.0
+scale = Vector2(0.64, 0.64)
+text = "NEW CONVERSATION"
+metadata/_edit_use_anchors_ = true

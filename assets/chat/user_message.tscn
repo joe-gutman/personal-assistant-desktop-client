@@ -1,0 +1,3 @@
+[gd_scene format=3 uid="uid://b5itre1in4qxh"]
+
+[node name="UserMessage" type="Node2D"]

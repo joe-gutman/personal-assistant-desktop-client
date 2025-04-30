@@ -1,0 +1,48 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqke0vubikh0h"]
+
+[ext_resource type="Script" uid="uid://bfjuja3w1utcf" path="res://scripts/communication.gd" id="1_krot7"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_krot7")
+
+[node name="TextInput" type="TextEdit" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 274.0
+offset_top = 458.0
+offset_right = 668.0
+offset_bottom = 571.0
+grow_horizontal = 2
+size_flags_vertical = 4
+
+[node name="TextOutput" type="RichTextLabel" parent="."]
+offset_left = 276.0
+offset_top = 43.0
+offset_right = 797.0
+offset_bottom = 442.0
+vertical_alignment = 2
+
+[node name="SendButton" type="Button" parent="."]
+offset_left = 689.0
+offset_top = 467.0
+offset_right = 892.0
+offset_bottom = 507.0
+scale = Vector2(0.64, 0.64)
+text = "SEND"
+
+[node name="CancelButton" type="Button" parent="."]
+offset_left = 689.0
+offset_top = 501.0
+offset_right = 892.0
+offset_bottom = 541.0
+scale = Vector2(0.64, 0.64)
+text = "CANCEL"
+
+[node name="NewConversation" type="Button" parent="."]
+offset_left = 689.0
+offset_top = 534.0
+offset_right = 892.0
+offset_bottom = 574.0
+scale = Vector2(0.64, 0.64)
+text = "NEW CONVERSATION"

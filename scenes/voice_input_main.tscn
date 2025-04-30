@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://dx0ysdu7i7hb4"]
+
+[ext_resource type="Script" uid="uid://daj1so5qcmnfy" path="res://scripts/mic.gd" id="2_itgnf"]
+
+[node name="VoiceInputMain" type="Node2D"]
+
+[node name="Mic" type="Node" parent="."]
+script = ExtResource("2_itgnf")
+
+[node name="AudioPlayer" type="AudioStreamPlayer" parent="Mic"]
