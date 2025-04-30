@@ -8,6 +8,10 @@ Built with Godot Engine (2D) to provide a real-time, voice-driven task managemen
 
 This client connects to the backend server to offload all heaving lifting of task and sechule management, real-time voice interactions, speech to text, and text to speech functionalities. 
 
+# Built with
+- Godot Engine
+- GDScript
+
 ## Features
 
 - Responsive 2D UI for viewing tasks and schedules
