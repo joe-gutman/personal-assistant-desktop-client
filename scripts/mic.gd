@@ -1,123 +1,99 @@
 extends Node
 
-@onready var player: AudioStreamPlayer = $AudioPlayer
+@onready var mic: AudioStreamPlayer = $AudioStreamPlayer
+var capture: AudioEffectCapture
 
-var audio_capture: AudioEffectCapture
-var recording = false
-var buffer = PackedVector2Array()
-var record_time = 0.0
-var duration = 5.0  # Seconds
+var audio_socket_node: Node
+var audio_windows_avg = []
+var max_window_count = 10
+var speaking_threshold = 0.01
+var silence_threshold = 0.001
+var listening = false
 
+func handle_audio(frames: PackedVector2Array):
+	var pcm := PackedByteArray()
+	for f in frames:
+		var mono = (f.x + f.y) / 2.0;
+		var sample = int(clamp(mono, -1, 1) * 32767)
+		pcm.append(sample & 0xff)
+		pcm.append((sample >> 8) & 0xff)
 
+	audio_socket_node.send_message(pcm)
 
 func _ready():
-	AudioServer.input_device = "Default"
-	var bus_index = AudioServer.get_bus_index("Record")
-	audio_capture = AudioServer.get_bus_effect(bus_index, 0)
+	audio_socket_node = get_parent().get_node("WebSockets/AudioSocket")
+	print(audio_socket_node)
+	var bus_idx = AudioServer.get_bus_index("MicInput")
+	capture = AudioServer.get_bus_effect(bus_idx, 0)
 
-	if audio_capture:
-		print("🎤 Mic is ready!")
-		start_recording()
-	else:
-		print("❌ Mic setup failed")
+	var mic_stream = AudioStreamMicrophone.new()
+	mic.stream = mic_stream
+	mic.bus = "MicInput"
+	mic.play()
 
-func _process(delta):
-	if recording and audio_capture and audio_capture.can_get_buffer(512):
-		var chunk = audio_capture.get_buffer(512)
-		buffer.append_array(chunk)
-		record_time += delta
-
-		if chunk.size() > 0:
-			print("📈 Sample peek: ", chunk[0])
-
-		if record_time >= duration:
-			stop_recording()
+	print("🎧 Mic stream started on bus:", AudioServer.get_bus_name(bus_idx))
 
 
-func start_recording():
-	print("🔴 Recording started")
-	recording = true
-	buffer = PackedVector2Array()
-	record_time = 0.0
+# func _process(_delta):
+#     var frames = capture.get_buffer(128)
+#     if frames.size() > 0:
+#         draw_waveform(frames)
 
-func stop_recording():
-	print("🛑 Recording stopped. Saving to disk...")
-	recording = false
-	var path = "user://recorded_audio.wav"
-	save_wav_file(path)
-	play_wav(path)
+func _on_Timer_timeout() -> void:
+	var frames = capture.get_buffer(4096)
 
-func save_wav_file(path: String):
-	var byte_data = convert_to_pcm(buffer)
-	var wav_data = build_wav(byte_data, 16000)  # 16 kHz sample rate
-	var file = FileAccess.open(path, FileAccess.WRITE)
-	file.store_buffer(wav_data)
-	file.close()
-	print("✅ Saved to ", path)
+	var speech_detected = false
+	var listen_idx = 0
 
-func play_wav(path: String):
-	var file = FileAccess.open(path, FileAccess.READ)
-	if file:
-		var data = file.get_buffer(file.get_length())
-		var stream = AudioStreamWAV.new()
-		stream.format = AudioStreamWAV.FORMAT_16_BITS
-		stream.stereo = false
-		stream.mix_rate = 16000  # Sample rate used in save
-		stream.data = data
-		player.stream = stream
-		player.play()
-		print("▶️ Playing audio")
 
-func convert_to_pcm(samples: PackedVector2Array) -> PackedByteArray:
-	var pcm = PackedByteArray()
-	for i in samples.size():
-		var s = samples[i]
-		var mono = (s.x + s.y) * 0.5  # Mix stereo to mono
-		var clamped = clamp(mono, -1.0, 1.0)
-		var int_sample = int(clamped * 32767.0)
-		if int_sample < 0:
-			int_sample += 65536  # Convert to unsigned for little endian
-		pcm.append(int_sample & 0xFF)
-		pcm.append((int_sample >> 8) & 0xFF)
-	return pcm
+	# var print_frames = []
+	for i in range(frames.size()):
+		# if i < 5:
+		# 	print_frames.append(frames[i])
+		# elif i > 5: 
+		# 	print(print_frames);
+		var amplitude = max(abs(frames[i].x), abs(frames[i].y))
+		if amplitude > speaking_threshold:
+			speech_detected = true
+			listen_idx = i
+			break
 
-func build_wav(pcm: PackedByteArray, sample_rate: int) -> PackedByteArray:
-	var header = PackedByteArray()
+	if !listening and speech_detected:
+		print("🔉Started Listening")
+		listening = true
+		audio_windows_avg.clear()
 
-	var byte_rate = sample_rate * 2  # Mono, 16-bit
-	var block_align = 2
-	var subchunk2_size = pcm.size()
-	var chunk_size = 36 + subchunk2_size
+			
+	if listening:
+		var total_amplitude = 0
+		var frame_count = 0
+		var speech_frames:= PackedVector2Array()
 
-	header.append_array("RIFF".to_ascii_buffer())
-	header.append_array(to_le32(chunk_size))
-	header.append_array("WAVE".to_ascii_buffer())
-	header.append_array("fmt ".to_ascii_buffer())
-	header.append_array(to_le32(16))  # Subchunk1Size (PCM)
-	header.append_array(to_le16(1))   # AudioFormat (PCM)
-	header.append_array(to_le16(1))   # NumChannels (mono)
-	header.append_array(to_le32(sample_rate))
-	header.append_array(to_le32(byte_rate))
-	header.append_array(to_le16(block_align))
-	header.append_array(to_le16(16))  # BitsPerSample
-	header.append_array("data".to_ascii_buffer())
-	header.append_array(to_le32(subchunk2_size))
-	header.append_array(pcm)
+		# Get average amplitude of all frames containing speech, save as audio window
+		for i in range(listen_idx, frames.size()):
+			total_amplitude += max(abs(frames[i].x), abs(frames[i].y))
+			frame_count += 1
+			speech_frames.append(frames[i])
 
-	return header
+		var avg_amplitude = total_amplitude / frame_count;
+		audio_windows_avg.append(avg_amplitude)
 
-func to_le16(value: int) -> PackedByteArray:
-	var b = PackedByteArray()
-	b.append(value & 0xFF)
-	b.append((value >> 8) & 0xFF)
-	return b
+		if audio_windows_avg.size() > max_window_count:
+			audio_windows_avg.pop_front()
 
-func to_le32(value: int) -> PackedByteArray:
-	var b = PackedByteArray()
-	b.append(value & 0xFF)
-	b.append((value >> 8) & 0xFF)
-	b.append((value >> 16) & 0xFF)
-	b.append((value >> 24) & 0xFF)
-	return b
+		# when audio window queue is full, check if all windows are silent
+		var all_below = false
+		if audio_windows_avg.size() == max_window_count:
+			all_below = true;
+			for amplitude in audio_windows_avg:
+				if amplitude > silence_threshold:
+					all_below = false
+					break
+			if all_below:
+				print("⛔ Stopped Listening")
+				listening = false
 
-	
+		# if all windows are not silent handle audio
+		if !all_below: 
+			handle_audio(speech_frames)
+		

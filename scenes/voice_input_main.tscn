@@ -1,10 +1,28 @@
-[gd_scene load_steps=2 format=3 uid="uid://dx0ysdu7i7hb4"]
+[gd_scene load_steps=5 format=3 uid="uid://dx0ysdu7i7hb4"]
 
+[ext_resource type="Script" uid="uid://3shdesccgovv" path="res://scripts/websocket.gd" id="2_fkb8d"]
 [ext_resource type="Script" uid="uid://daj1so5qcmnfy" path="res://scripts/mic.gd" id="2_itgnf"]
+[ext_resource type="Script" uid="uid://h2i03t6or7ar" path="res://scripts/audio_socket.gd" id="3_s4y46"]
+[ext_resource type="Script" uid="uid://bbfilrncqlph7" path="res://scripts/chat_socket.gd" id="4_tbga4"]
 
 [node name="VoiceInputMain" type="Node2D"]
 
 [node name="Mic" type="Node" parent="."]
 script = ExtResource("2_itgnf")
 
-[node name="AudioPlayer" type="AudioStreamPlayer" parent="Mic"]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Mic"]
+
+[node name="MicTimer" type="Timer" parent="Mic"]
+wait_time = 0.1
+autostart = true
+
+[node name="WebSockets" type="Node" parent="."]
+script = ExtResource("2_fkb8d")
+
+[node name="AudioSocket" type="Node" parent="WebSockets"]
+script = ExtResource("3_s4y46")
+
+[node name="ChatSocket" type="Node" parent="WebSockets"]
+script = ExtResource("4_tbga4")
+
+[connection signal="timeout" from="Mic/MicTimer" to="Mic" method="_on_Timer_timeout"]
