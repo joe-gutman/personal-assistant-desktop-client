@@ -29,14 +29,6 @@ func _process(_delta: float) -> void:
 			is_connected = false
 			_on_close(socket.get_close_code(), socket.get_close_reason())
 
-func send_message(message):
-	if typeof(message) == TYPE_STRING:
-		socket.send(message.to_utf8_buffer())
-	elif typeof(message) == TYPE_PACKED_BYTE_ARRAY:
-		socket.send(message)
-	else:
-		push_error("Unsupported message type: %s" % typeof(message))
-
 func _on_open():
 	print( name, "WebSocket connected!")
 
@@ -45,3 +37,4 @@ func _on_close(code, reason):
 
 # Private virtual methods
 func _on_message(message): pass
+func _send_message(): pass

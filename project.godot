@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 buses/default_bus_layout="uid://ckw76520vxgcr"
 driver/enable_input=true
+driver/mix_rate=48000
 
 [autoload]
 

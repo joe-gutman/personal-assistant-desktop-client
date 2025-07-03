@@ -3,24 +3,51 @@ extends Node
 @onready var mic: AudioStreamPlayer = $AudioStreamPlayer
 var capture: AudioEffectCapture
 
+var all_audio_bytes: PackedByteArray = PackedByteArray()
 var audio_socket_node: Node
 var audio_windows_avg = []
 var max_window_count = 10
-var speaking_threshold = 0.01
-var silence_threshold = 0.001
+var speaking_threshold = .01
+var silence_threshold = .001
 var listening = false
+var file_count = 0
 
-func handle_audio(frames: PackedVector2Array):
+
+func save_audio_to_wav():
+	var wav = AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = int(AudioServer.get_mix_rate())
+	wav.stereo = false
+	wav.data = all_audio_bytes
+	var path = "user://logs/mic/audio_%d.wav" % file_count
+	file_count += 1
+	print("Godot mix rate:", AudioServer.get_mix_rate())
+	wav.save_to_wav(path)
+	print("Saved audio to: ", path)
+
+func convert_audio(frames: PackedVector2Array) -> PackedByteArray:
 	var pcm := PackedByteArray()
-	for f in frames:
-		var mono = (f.x + f.y) / 2.0;
-		var sample = int(clamp(mono, -1, 1) * 32767)
-		pcm.append(sample & 0xff)
-		pcm.append((sample >> 8) & 0xff)
+	for frame in frames:
+		# Downmix stereo to mono, giving 80% headroom
+		var mono := ((frame.x + frame.y) * 0.5) * 0.8
+		mono = clamp(mono, -1.0, 1.0)  # Prevent overflow
+		var int_sample := int(round(mono * 32767.0))
+		pcm.append(int_sample & 0xff)      # LSB
+		pcm.append((int_sample >> 8) & 0xff)  # MSB
+	return pcm
 
-	audio_socket_node.send_message(pcm)
 
 func _ready():
+	AudioServer.input_device = "Microphone (NVIDIA Broadcast)"
+	var mic_list := AudioServer.get_input_device_list()
+	print("Available mics:", mic_list)
+
+	print("Current input device:", AudioServer.input_device)
+
+
+	print("Mic after change:", AudioServer.input_device)
+
+
 	audio_socket_node = get_parent().get_node("WebSockets/AudioSocket")
 	print(audio_socket_node)
 	var bus_idx = AudioServer.get_bus_index("MicInput")
@@ -31,13 +58,8 @@ func _ready():
 	mic.bus = "MicInput"
 	mic.play()
 
-	print("🎧 Mic stream started on bus:", AudioServer.get_bus_name(bus_idx))
-
-
-# func _process(_delta):
-#     var frames = capture.get_buffer(128)
-#     if frames.size() > 0:
-#         draw_waveform(frames)
+	print("Mic stream started on bus:", AudioServer.get_bus_name(bus_idx))
+	print("Godot mix rate:", AudioServer.get_mix_rate())
 
 func _on_Timer_timeout() -> void:
 	var frames = capture.get_buffer(4096)
@@ -59,8 +81,9 @@ func _on_Timer_timeout() -> void:
 			break
 
 	if !listening and speech_detected:
-		print("🔉Started Listening")
+		print("Started Listening")
 		listening = true
+		audio_socket_node.send_message(listening, null)
 		audio_windows_avg.clear()
 
 			
@@ -70,7 +93,9 @@ func _on_Timer_timeout() -> void:
 		var speech_frames:= PackedVector2Array()
 
 		# Get average amplitude of all frames containing speech, save as audio window
-		for i in range(listen_idx, frames.size()):
+		var pre_speech_frames = 1024
+		var speech_start = max(0, listen_idx - pre_speech_frames)
+		for i in range(speech_start, frames.size()):
 			total_amplitude += max(abs(frames[i].x), abs(frames[i].y))
 			frame_count += 1
 			speech_frames.append(frames[i])
@@ -90,10 +115,15 @@ func _on_Timer_timeout() -> void:
 					all_below = false
 					break
 			if all_below:
-				print("⛔ Stopped Listening")
+				audio_socket_node.send_message(listening, null)
+				print("Stopped Listening")
+				save_audio_to_wav()
+				all_audio_bytes.clear()
 				listening = false
 
 		# if all windows are not silent handle audio
 		if !all_below: 
-			handle_audio(speech_frames)
+			var bytes := convert_audio(speech_frames)
+			audio_socket_node.send_message(listening, bytes)
+			all_audio_bytes.append_array(bytes)
 		
