@@ -1,25 +1,15 @@
-[gd_resource type="AudioBusLayout" load_steps=4 format=3 uid="uid://ckw76520vxgcr"]
+[gd_resource type="AudioBusLayout" load_steps=2 format=3 uid="uid://ckw76520vxgcr"]
 
-[sub_resource type="AudioEffectCapture" id="AudioEffectCapture_j3pel"]
-resource_name = "Capture"
-
-[sub_resource type="AudioEffectAmplify" id="AudioEffectAmplify_j3pel"]
-resource_name = "Amplify"
-
-[sub_resource type="AudioEffectHighPassFilter" id="AudioEffectHighPassFilter_j3pel"]
-resource_name = "HighPassFilter"
+[sub_resource type="AudioEffectRecord" id="AudioEffectRecord_j3pel"]
+resource_name = "Record"
 
 [resource]
-bus/0/volume_db = -80.0
+bus/0/volume_db = 6.02
 bus/1/name = &"MicInput"
 bus/1/solo = false
 bus/1/mute = false
 bus/1/bypass_fx = false
 bus/1/volume_db = 6.02
 bus/1/send = &"Master"
-bus/1/effect/0/effect = SubResource("AudioEffectCapture_j3pel")
+bus/1/effect/0/effect = SubResource("AudioEffectRecord_j3pel")
 bus/1/effect/0/enabled = true
-bus/1/effect/1/effect = SubResource("AudioEffectAmplify_j3pel")
-bus/1/effect/1/enabled = true
-bus/1/effect/2/effect = SubResource("AudioEffectHighPassFilter_j3pel")
-bus/1/effect/2/enabled = true
