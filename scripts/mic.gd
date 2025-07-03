@@ -28,13 +28,13 @@ func save_audio_to_wav():
 func convert_audio(frames: PackedVector2Array) -> PackedByteArray:
 	var pcm := PackedByteArray()
 	for frame in frames:
-		# Downmix stereo to mono, giving 80% headroom
-		var mono := ((frame.x + frame.y) * 0.5) * 0.8
-		mono = clamp(mono, -1.0, 1.0)  # Prevent overflow
-		var int_sample := int(round(mono * 32767.0))
-		pcm.append(int_sample & 0xff)      # LSB
-		pcm.append((int_sample >> 8) & 0xff)  # MSB
+		# Use only the left channel (frame.x) for mono input
+		# var mono := clamp(frame.x * 0.8, -1.0, 1.0)  # 80% headroom, prevent overflow
+		var int_sample : int = int(round(frame.x * 32767.0))
+		pcm.append(int_sample & 0xff)           # LSB
+		pcm.append((int_sample >> 8) & 0xff)    # MSB
 	return pcm
+
 
 
 func _ready():
@@ -62,7 +62,11 @@ func _ready():
 	print("Godot mix rate:", AudioServer.get_mix_rate())
 
 func _on_Timer_timeout() -> void:
-	var frames = capture.get_buffer(4096)
+	var frames
+	var available = capture.get_frames_available()
+	if available > 0:
+		frames = capture.get_buffer(available)
+		# Now 'frames' contains all available audio frames
 
 	var speech_detected = false
 	var listen_idx = 0
