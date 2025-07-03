@@ -17,7 +17,7 @@ func save_audio_to_wav():
 	var wav = AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
 	wav.mix_rate = int(AudioServer.get_mix_rate())
-	wav.stereo = false
+	wav.stereo = true
 	wav.data = all_audio_bytes
 	var path = "user://logs/mic/audio_%d.wav" % file_count
 	file_count += 1
@@ -28,12 +28,17 @@ func save_audio_to_wav():
 func convert_audio(frames: PackedVector2Array) -> PackedByteArray:
 	var pcm := PackedByteArray()
 	for frame in frames:
-		# Downmix stereo to mono, giving 80% headroom
-		var mono := ((frame.x + frame.y) * 0.5) * 0.8
-		mono = clamp(mono, -1.0, 1.0)  # Prevent overflow
-		var int_sample := int(round(mono * 32767.0))
-		pcm.append(int_sample & 0xff)      # LSB
-		pcm.append((int_sample >> 8) & 0xff)  # MSB
+		# Left channel (frame.x)
+		var left : float = clamp(frame.x * 0.8, -1.0, 1.0)
+		var left_int := int(round(left * 32767.0))
+		pcm.append(left_int & 0xff)           # LSB
+		pcm.append((left_int >> 8) & 0xff)    # MSB
+
+		# Right channel (frame.y)
+		var right : float = clamp(frame.y * 0.8, -1.0, 1.0)
+		var right_int := int(round(right * 32767.0))
+		pcm.append(right_int & 0xff)          # LSB
+		pcm.append((right_int >> 8) & 0xff)   # MSB
 	return pcm
 
 
