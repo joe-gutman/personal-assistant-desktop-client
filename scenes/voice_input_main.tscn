@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://3shdesccgovv" path="res://scripts/websocket.gd" id="2_fkb8d"]
 [ext_resource type="Script" uid="uid://daj1so5qcmnfy" path="res://scripts/mic.gd" id="2_itgnf"]
-[ext_resource type="Script" uid="uid://h2i03t6or7ar" path="res://scripts/audio_socket.gd" id="3_s4y46"]
-[ext_resource type="Script" uid="uid://bbfilrncqlph7" path="res://scripts/chat_socket.gd" id="4_tbga4"]
+[ext_resource type="Script" uid="uid://c8m5p85vy05hw" path="res://scripts/audio_socket.gd" id="3_s4y46"]
+[ext_resource type="Script" path="res://scripts/chat_socket.gd" id="4_tbga4"]
 
 [node name="VoiceInputMain" type="Node2D"]
 
@@ -19,10 +19,10 @@ autostart = true
 [node name="WebSockets" type="Node" parent="."]
 script = ExtResource("2_fkb8d")
 
-[node name="AudioSocket" type="Node" parent="WebSockets"]
+[node name="ClientStream" type="Node" parent="WebSockets"]
 script = ExtResource("3_s4y46")
 
-[node name="ChatSocket" type="Node" parent="WebSockets"]
+[node name="ServerStream" type="Node" parent="WebSockets"]
 script = ExtResource("4_tbga4")
 
 [connection signal="timeout" from="Mic/MicTimer" to="Mic" method="_on_Timer_timeout"]

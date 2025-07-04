@@ -1,8 +1,8 @@
 extends WebSocketClient
 
 func _ready():
-	connect_to("/ws/chat")
+	connect_to("/ws/server")
 
 func _on_message(message):
-	print("Chat message received:", message.get_string_from_utf8())
+	print("Server message received:", message.get_string_from_utf8())
 	# Add your chat-specific handling here (e.g., display message)

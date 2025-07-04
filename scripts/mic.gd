@@ -4,9 +4,9 @@ extends Node
 var capture: AudioEffectCapture
 
 var all_audio_bytes: PackedByteArray = PackedByteArray()
-var audio_socket_node: Node
+var client_stream_node: Node
 var audio_windows_avg = []
-var max_window_count = 10
+var max_window_count = 2
 var speaking_threshold = .01
 var silence_threshold = .001
 var listening = false
@@ -35,8 +35,6 @@ func convert_audio(frames: PackedVector2Array) -> PackedByteArray:
 		pcm.append((int_sample >> 8) & 0xff)    # MSB
 	return pcm
 
-
-
 func _ready():
 	AudioServer.input_device = "Microphone (NVIDIA Broadcast)"
 	var mic_list := AudioServer.get_input_device_list()
@@ -48,8 +46,8 @@ func _ready():
 	print("Mic after change:", AudioServer.input_device)
 
 
-	audio_socket_node = get_parent().get_node("WebSockets/AudioSocket")
-	print(audio_socket_node)
+	client_stream_node = get_parent().get_node("WebSockets/ClientStream")
+	print(client_stream_node)
 	var bus_idx = AudioServer.get_bus_index("MicInput")
 	capture = AudioServer.get_bus_effect(bus_idx, 0)
 
@@ -58,8 +56,8 @@ func _ready():
 	mic.bus = "MicInput"
 	mic.play()
 
-	print("Mic stream started on bus:", AudioServer.get_bus_name(bus_idx))
-	print("Godot mix rate:", AudioServer.get_mix_rate())
+	# print("Mic stream started on bus:", AudioServer.get_bus_name(bus_idx))
+	# print("Godot mix rate:", AudioServer.get_mix_rate())
 
 func _on_Timer_timeout() -> void:
 	var frames
@@ -87,7 +85,7 @@ func _on_Timer_timeout() -> void:
 	if !listening and speech_detected:
 		print("Started Listening")
 		listening = true
-		audio_socket_node.send_message(listening, null)
+		client_stream_node.send_message(listening, null)
 		audio_windows_avg.clear()
 
 			
@@ -119,15 +117,16 @@ func _on_Timer_timeout() -> void:
 					all_below = false
 					break
 			if all_below:
-				audio_socket_node.send_message(listening, null)
+				listening = false
+				client_stream_node.send_message(listening, null)
 				print("Stopped Listening")
 				save_audio_to_wav()
 				all_audio_bytes.clear()
-				listening = false
 
 		# if all windows are not silent handle audio
 		if !all_below: 
 			var bytes := convert_audio(speech_frames)
-			audio_socket_node.send_message(listening, bytes)
+			client_stream_node.send_message(listening, bytes)
+			print("Audio sent with size: ", bytes.size())
 			all_audio_bytes.append_array(bytes)
 		
