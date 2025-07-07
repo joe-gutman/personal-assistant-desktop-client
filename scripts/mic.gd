@@ -1,17 +1,20 @@
 extends Node
 
-@onready var mic: AudioStreamPlayer = $AudioStreamPlayer
+@onready var mic: AudioStreamPlayer = $MicStreamPlayer
 var capture: AudioEffectCapture
 
 var all_audio_bytes: PackedByteArray = PackedByteArray()
-var client_stream_node: Node
 var audio_windows_avg = []
-var max_window_count = 2
+var max_window_count = 10
 var speaking_threshold = .01
 var silence_threshold = .001
 var listening = false
 var file_count = 0
+var mic_data_callback = null
 
+func setup(callback: Callable):
+	mic_data_callback = callback
+	$Timer.start()
 
 func save_audio_to_wav():
 	var wav = AudioStreamWAV.new()
@@ -42,12 +45,11 @@ func _ready():
 
 	print("Current input device:", AudioServer.input_device)
 
-
 	print("Mic after change:", AudioServer.input_device)
 
 
-	client_stream_node = get_parent().get_node("WebSockets/ClientStream")
-	print(client_stream_node)
+	mic_data_callback = get_parent().get_node("WebSockets/ClientStream")
+	print(mic_data_callback)
 	var bus_idx = AudioServer.get_bus_index("MicInput")
 	capture = AudioServer.get_bus_effect(bus_idx, 0)
 
@@ -62,7 +64,9 @@ func _ready():
 func _on_Timer_timeout() -> void:
 	var frames
 	var available = capture.get_frames_available()
-	if available > 0:
+	if available == 0:
+		return
+	else:
 		frames = capture.get_buffer(available)
 		# Now 'frames' contains all available audio frames
 
@@ -85,7 +89,7 @@ func _on_Timer_timeout() -> void:
 	if !listening and speech_detected:
 		print("Started Listening")
 		listening = true
-		client_stream_node.send_message(listening, null)
+
 		audio_windows_avg.clear()
 
 			
@@ -118,7 +122,10 @@ func _on_Timer_timeout() -> void:
 					break
 			if all_below:
 				listening = false
-				client_stream_node.send_message(listening, null)
+				mic_data_callback.call({
+					"status": listening,
+					"audio": null
+				})
 				print("Stopped Listening")
 				save_audio_to_wav()
 				all_audio_bytes.clear()
@@ -126,7 +133,11 @@ func _on_Timer_timeout() -> void:
 		# if all windows are not silent handle audio
 		if !all_below: 
 			var bytes := convert_audio(speech_frames)
-			client_stream_node.send_message(listening, bytes)
+			
+			mic_data_callback.call({
+				"status": listening,
+				"audio": bytes
+			})
 			print("Audio sent with size: ", bytes.size())
 			all_audio_bytes.append_array(bytes)
 		
